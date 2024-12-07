@@ -1,1 +1,1 @@
-## Hospital Datanase Management System
+## Hospital Database Management System
