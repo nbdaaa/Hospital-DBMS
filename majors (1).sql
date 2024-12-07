@@ -1,0 +1,10 @@
+insert into major (major_id, major_name) values (1, 'Cardiology');
+insert into major (major_id, major_name) values (2, 'Neurology');
+insert into major (major_id, major_name) values (3, 'Dermatology');
+insert into major (major_id, major_name) values (4, 'Pediatrics');
+insert into major (major_id, major_name) values (5, 'Oncology');
+insert into major (major_id, major_name) values (6, 'Gynecology');
+insert into major (major_id, major_name) values (7, 'Orthopedics');
+insert into major (major_id, major_name) values (8, 'Urology');
+insert into major (major_id, major_name) values (9, 'Psychiatry');
+insert into major (major_id, major_name) values (10, 'Endocrinology');
