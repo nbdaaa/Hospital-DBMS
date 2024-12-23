@@ -1,0 +1,10 @@
+insert into departments (department_id, opening_time, closing_time, department_name) values (1, '06:00:00', '21:00:00', 'Cardiology');
+insert into departments (department_id, opening_time, closing_time, department_name) values (2, '07:00:00', '21:00:00', 'Neurology');
+insert into departments (department_id, opening_time, closing_time, department_name) values (3, '06:00:00', '22:00:00', 'Dermatology');
+insert into departments (department_id, opening_time, closing_time, department_name) values (4, '06:00:00', '21:00:00', 'Pediatrics');
+insert into departments (department_id, opening_time, closing_time, department_name) values (5, '06:00:00', '21:00:00', 'Oncology');
+insert into departments (department_id, opening_time, closing_time, department_name) values (6, '06:00:00', '21:00:00', 'Gynecology');
+insert into departments (department_id, opening_time, closing_time, department_name) values (7, '06:00:00', '22:00:00', 'Orthopedics');
+insert into departments (department_id, opening_time, closing_time, department_name) values (8, '06:00:00', '22:00:00', 'Urology');
+insert into departments (department_id, opening_time, closing_time, department_name) values (9, '07:00:00', '22:00:00', 'Psychiatry');
+insert into departments (department_id, opening_time, closing_time, department_name) values (10, '06:00:00', '22:00:00', 'Endocrinology');
