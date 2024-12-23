@@ -1,7 +1,10 @@
-													-- BEGIN --
-
-
 													-- TABLES -- 
+-- DROP TABLE major;
+CREATE TABLE major (
+	major_id INT,
+	major_name VARCHAR NOT NULL,
+  	CONSTRAINT major_pkey PRIMARY KEY(major_id)
+);
 
 --DROP TABLE doctors;
 CREATE TABLE doctors(
@@ -14,48 +17,58 @@ CREATE TABLE doctors(
 	years_of_exp INT NOT NULL,
 	roles VARCHAR NOT NULL,
 	major_id INT NOT NULL,
-	department_id INT,
+	workplace VARCHAR NOT NULL,
 	CONSTRAINT doctor_pkey PRIMARY KEY(doctor_id),
 	CONSTRAINT doctor_major_fkey FOREIGN KEY (major_id) REFERENCES major(major_id) ON DELETE CASCADE,
-	CONSTRAINT doctor_work_place_fkey FOREIGN KEY (department_id) REFERENCES departments(department_id) ON DELETE SET NULL,
 	CONSTRAINT check_gender CHECK (gender = 'F' or gender = 'M')
 );
 
---DROP TABLE departments;
-CREATE TABLE departments(
-	department_id INT,
-	opening_time TIME NOT NULL,
-	closing_time TIME NOT NULL,
-	department_name VARCHAR NOT NULL,
-	CONSTRAINT department_pkey PRIMARY KEY (department_id)
+-- DROP TABLE disease
+CREATE TABLE Disease (
+    disease_id SERIAL PRIMARY KEY,
+    major_id INT NOT NULL,
+    disease_name VARCHAR NOT NULL,
+    CONSTRAINT disease_major_fkey FOREIGN KEY (major_id) REFERENCES major(major_id) ON DELETE CASCADE
 );
 
---DROP TABLE major;
-CREATE TABLE major (
-	major_id INT,
-	major_name VARCHAR NOT NULL,
-  CONSTRAINT major_pkey PRIMARY KEY(major_id)
+
+-- DROP TABLE disease_symptoms
+CREATE TABLE Symptom (
+    symptom_id INT,
+    symptom_name VARCHAR(100) NOT NULL,
+    disease_id INT,
+    FOREIGN KEY(disease_id) REFERENCES Disease(disease_id),
+    PRIMARY KEY(symptom_id, disease_id)
 );
 
---DROP TABLE symptoms;
-CREATE TABLE symptoms(
-	symptoms_name VARCHAR UNIQUE,
-	major_id INT NOT NULL,
-	CONSTRAINT symptom_major_fkey FOREIGN KEY (major_id) REFERENCES major(major_id) ON DELETE CASCADE
-);
 
---DROP TABLE doctor_slots
-CREATE TABLE doctor_slots (
+--DROP TABLE doctor_schedule
+CREATE TABLE doctor_schedule (
 	slot_id INT, 
 	slot_begin_time TIMESTAMP NOT NULL,
   	slot_end_time TIMESTAMP NOT NULL,
 	doctor_id INT NOT NULL,
+	nums_of_patient INT,
   	available VARCHAR NOT NULL,
-	CONSTRAINT doctor_slots_pkey PRIMARY KEY (slot_id, doctor_id),
-	CONSTRAINT doctor_slots_doctor_fkey FOREIGN KEY (doctor_id) REFERENCES doctors(doctor_id) ON DELETE CASCADE,
+	CONSTRAINT doctor_schedule_pkey PRIMARY KEY (slot_id, doctor_id),
+	CONSTRAINT doctor_schedule_doctor_fkey FOREIGN KEY (doctor_id) REFERENCES doctors(doctor_id) ON DELETE CASCADE,
 	CONSTRAINT check_time CHECK (slot_begin_time < slot_end_time),
 	CONSTRAINT check_available CHECK (available = 'Yes' or available = 'No')
 );
+
+--DROP TABLE patients;
+CREATE TABLE patients(
+	patient_id INT,
+	patient_first_name VARCHAR NOT NULL,
+	patient_last_name VARCHAR NOT NULL,
+	patient_dob DATE NOT NULL,
+	age INT NOT NULL,
+	gender VARCHAR NOT NULL,
+	address VARCHAR NOT NULL,
+	CONSTRAINT patient_pkey PRIMARY KEY (patient_id),
+	CONSTRAINT check_gender CHECK (gender = 'F' or gender = 'M')
+);
+
 --SELECT * FROM doctor_slots
 --DROP TABLE appointments
 CREATE TABLE appointments(
@@ -63,7 +76,7 @@ CREATE TABLE appointments(
 	patient_id INT,
 	doctor_id INT,
 	CONSTRAINT appointment_pkey PRIMARY KEY (slot_id, patient_id, doctor_id),
-	CONSTRAINT appointment_slot_fkey FOREIGN KEY (slot_id, doctor_id) REFERENCES doctor_slots(slot_id, doctor_id) ON DELETE CASCADE,
+	CONSTRAINT appointment_slot_fkey FOREIGN KEY (slot_id, doctor_id) REFERENCES doctor_schedule(slot_id, doctor_id) ON DELETE CASCADE,
 	CONSTRAINT appointment_patient_fkey FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE
 );
 
@@ -85,20 +98,6 @@ CREATE TABLE record (
 	end_time TIMESTAMP,
 	CONSTRAINT record_pkey PRIMARY KEY (slot_id, patient_id, doctor_id),
 	CONSTRAINT record_appointment_fkey FOREIGN KEY (slot_id, patient_id, doctor_id) REFERENCES appointments(slot_id, patient_id, doctor_id) ON DELETE CASCADE
-)
-
-
---DROP TABLE patients;
-CREATE TABLE patients(
-	patient_id INT,
-	patient_first_name VARCHAR NOT NULL,
-	patient_last_name VARCHAR NOT NULL,
-	patient_dob DATE NOT NULL,
-	age INT NOT NULL,
-	gender VARCHAR NOT NULL,
-	address VARCHAR NOT NULL,
-	CONSTRAINT patient_pkey PRIMARY KEY (patient_id),
-	CONSTRAINT check_gender CHECK (gender = 'F' or gender = 'M')
 );
 
 --DROP TABLE medical_history;   
@@ -112,17 +111,16 @@ CREATE TABLE medical_history (
     CONSTRAINT history_patient_fkey FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE
 );
 
-
 													-- INDEX --
 
 
 CREATE INDEX symptom_name ON symptoms USING HASH(symptoms_name)
 
+-- CREATE INDEX disease_name 
+
 CREATE INDEX doctor_info ON doctors(doctor_first_name, doctor_last_name, years_of_exp, roles, major_id)
 
-CREATE INDEX department_working_time ON departments(opening_time, closing_time);
-
-CREATE INDEX doctor_slots_time ON doctor_slots(slot_begin_time, slot_end_time);
+CREATE INDEX doctor_schedule_time ON doctor_schedule(slot_begin_time, slot_end_time);
 
 CREATE INDEX patients_info ON patients(patient_first_name, patient_last_name, age, patient_dob);
 
@@ -134,106 +132,112 @@ CREATE INDEX medical_history_date ON medical_history(disease, diagnosis_date, cu
 													-- TRIGGER --
 
 -- Trigger để thay đổi trạng thái của slot sau khi khách hàng đã book appointment --
+CREATE OR REPLACE FUNCTION public.update_available_slots()
+RETURNS trigger 
+AS $$
+BEGIN 
+	UPDATE doctor_schedule
+	SET available = 'No' 
+	WHERE slot_id = NEW.slot_id;
+	RETURN NEW;
+END 
+$$ language plpgsql; 
 
 CREATE OR REPLACE TRIGGER available_slots 
 AFTER INSERT ON appointments
 FOR EACH ROW
 EXECUTE PROCEDURE public.update_available_slots()
 
-CREATE OR REPLACE FUNCTION public.update_available_slots() 
-RETURNS trigger
-AS $$
-BEGIN 
-    UPDATE doctor_slots
-	SET available = 'No'
-	WHERE slot_id = NEW.slot_id;
-	RETURN NEW;
-END;
-$$ language plpgsql;
 
 --------------------------------------------------------------
 
 -- Trigger để thay đổi trạng thái của slot sau khi khách hàng hủy appointment --
-
-CREATE OR REPLACE TRIGGER cancel_appointments 
-AFTER DELETE ON appointments
-FOR EACH ROW
-EXECUTE PROCEDURE public.cancel_appointment()
-
 CREATE OR REPLACE FUNCTION public.cancel_appointment() 
 RETURNS trigger
 AS $$
 BEGIN 
-    UPDATE doctor_slots
+    UPDATE doctor_schedule
 	SET available = 'Yes'
 	WHERE slot_id = OLD.slot_id;
 	RETURN NEW;
 END;
 $$ language plpgsql;
 
+CREATE OR REPLACE TRIGGER cancel_appointments 
+AFTER DELETE ON appointments
+FOR EACH ROW
+EXECUTE PROCEDURE public.cancel_appointment()
+
+
+
 --------------------------------------------------------------
 
 -- Trigger để thêm thông tin của appointment vào tiền sử bệnh án (medical_history) của khách hàng --
 
-CREATE OR REPLACE TRIGGER update_medical_history 
-AFTER UPDATE OF begin_time,end_time ON record
-FOR EACH ROW 
-EXECUTE PROCEDURE public.update_medical_history_function ()
-
-CREATE OR REPLACE FUNCTION public.update_medical_history_function ()
-RETURNS trigger
-AS $$
+CREATE OR REPLACE FUNCTION public.update_medical_history_function() 
+RETURNS trigger 
+AS $$ 
 BEGIN 
-	IF EXISTS (
-        SELECT 1
-        FROM medical_history
-        WHERE disease = NEW.disease AND NEW.patient_id = patient_id
-    ) THEN
-	IF EXISTS (
-        SELECT 1
-        FROM medical_history
-        WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id
-    ) THEN
-		UPDATE medical_history
-		SET prescription = CONCAT(NEW.prescription, ', ', prescription)
-		WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-		UPDATE medical_history
-		SET number_of_app = number_of_app + 1
-		WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-		UPDATE medical_history
-		SET cured_date = DATE(NEW.begin_time)
-		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-	ELSE 
+	-- Check if exists disease
+	IF EXISTS(
+		SELECT 1 
+		FROM medical_history 
+		WHERE disease = NEW.disease AND patient_id = NEW.patient_id
+	) THEN
+	-- Check if this disease had been cured ?
+	IF EXISTS(
+		SELECT 1 
+		FROM medical_history 
+		WHERE disease = NEW.disease  AND cured_date IS NULL AND patient_id = NEW.patient_id
+	) THEN 
+		-- update prescriptions and number of appointments. 
+		UPDATE medical_history 
+ 		SET prescription = CONCAT(NEW.prescription, ', ', prescription),
+			number_of_app = number_of_app + 1
+		WHERE disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
+		-- update cured date
+		UPDATE medical_history 
+		SET cured_date = DATE(NEW.end_time)
+		WHERE medical_condition_over_5 = 5 AND disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
+	--- If the disease had been cured in the past, then create a new record (chua thong tin tai phat cua benh)
+	ELSE
 		INSERT INTO medical_history(patient_id, disease, prescription, diagnosis_date)
-		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time));
-		UPDATE medical_history
-		SET cured_date = DATE(NEW.begin_time)
-		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-		UPDATE medical_history
-		SET number_of_app = (SELECT DISTINCT number_of_app FROM medical_history WHERE disease = NEW.disease AND cured_date IS NOT NULL AND NEW.patient_id = patient_id) + 1
-		WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-	END IF;
-	
-	ELSE 
+		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time));		
+		--update the number of app = the order of the latest appointment + 1
+		UPDATE medical_history 
+		SET number_of_app = ( 
+			SELECT COALESCE(MAX(number_of_app), 0) 
+			FROM medical_history 
+			WHERE disease = NEW.disease AND cured_date IS NOT NULL AND patient_id = NEW.patient_id
+		) + 1
+		WHERE disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
+		-- update cured date if medical_condition_over_5 = 5 (doctor's evaluation)
+		UPDATE medical_history 
+		SET cured_date = DATE(NEW.end_time)
+		WHERE medical_condition_over_5 = 5 AND disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
+	END IF; 
+	-- Case: New disease
+	ELSE
 		INSERT INTO medical_history(patient_id, disease, prescription, diagnosis_date, number_of_app)
-		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time), 1);
-		UPDATE medical_history
-		SET cured_date = DATE(NEW.begin_time)
-		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease AND NEW.patient_id = patient_id;
+		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time));		
+
+		UPDATE medical_history 
+		SET cured_date = DATE(NEW.end_time)
+		WHERE medical_condition_over_5 = 5 AND disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
 	END IF;
 	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE TRIGGER update_medical_history 
+AFTER UPDATE OF begin_time,end_time ON record
+FOR EACH ROW 
+EXECUTE PROCEDURE public.update_medical_history_function ()
+
 --------------------------------------------------------------
 
 -- Trigger tự động cập nhật thời gian của cuộc hẹn(appointment) theo thời gian của lịch làm việc bác sĩ đã đặt trước đấy --
-
-CREATE OR REPLACE TRIGGER update_time_record
-AFTER INSERT ON record
-FOR EACH ROW
-EXECUTE PROCEDURE public.update_time_record ()
 
 CREATE OR REPLACE FUNCTION public.update_time_record ()
 RETURNS trigger
@@ -241,8 +245,8 @@ AS $$
 DECLARE begintime TIMESTAMP;
 		endtime TIMESTAMP;
 BEGIN
-	begintime := (SELECT ds.slot_begin_time FROM doctor_slots ds WHERE ds.slot_id = NEW.slot_id);
-	endtime := (SELECT ds.slot_end_time FROM doctor_slots ds WHERE ds.slot_id = NEW.slot_id);
+	begintime := (SELECT ds.slot_begin_time FROM doctor_schedule ds WHERE ds.slot_id = NEW.slot_id);
+	endtime := (SELECT ds.slot_end_time FROM doctor_schedule ds WHERE ds.slot_id = NEW.slot_id);
 	UPDATE record
 	SET begin_time = begintime,
 		end_time = endtime
@@ -251,6 +255,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE TRIGGER update_time_record
+AFTER INSERT ON record
+FOR EACH ROW
+EXECUTE PROCEDURE public.update_time_record ()
 ----------------------------------------------------
 
 
@@ -285,10 +293,11 @@ BEGIN
 		  p.patient_dob = dob;
 END;
 $$ LANGUAGE plpgsql;
-DROP FUNCTION find_patient_health_record
+-- DROP FUNCTION find_patient_health_record
 
 
 -- Function có tác dụng tìm bác sĩ và các slot available cho bệnh nhân có dấu hiệu (symptoms) phù hợp với major của bác sĩ --
+-- DROP FUNCTION find_suitable_doctor_with_major
 
 CREATE OR REPLACE FUNCTION find_suitable_doctor_with_major (major VARCHAR)
 RETURNS TABLE (
@@ -301,7 +310,7 @@ RETURNS TABLE (
 	years_of_exp INT,
 	roles VARCHAR,
 	major_name VARCHAR,
-	department_name VARCHAR,
+	workplace VARCHAR,
 	slot_begin_time TIMESTAMP,
 	slot_end_time TIMESTAMP,
 	available VARCHAR
@@ -310,13 +319,11 @@ AS $$
 BEGIN
 	RETURN QUERY
 	SELECT d.doctor_id, d.doctor_first_name, d.doctor_last_name,d.doctor_email,
-		   d.gender, d.doctor_dob, d.years_of_exp, d.roles, m.major_name, de.department_name,
+		   d.gender, d.doctor_dob, d.years_of_exp, d.roles, m.major_name, d.workplace,
 		   ds.slot_begin_time, ds.slot_end_time, ds.available
 	FROM doctors d
 	JOIN major m ON m.major_id = d.major_id
-	
-	JOIN departments de ON d.department_id = de.department_id
-	JOIN doctor_slots ds ON ds.doctor_id = d.doctor_id
+	JOIN doctor_schedule ds ON ds.doctor_id = d.doctor_id
 	WHERE m.major_name = major AND ds.available = 'Yes'
 	ORDER BY slot_begin_time ASC;
 END;
@@ -329,12 +336,12 @@ RETURNS VOID
 AS $$
 DECLARE ans INT;
 BEGIN 
-	ans := (SELECT slot_id FROM doctor_slots WHERE slot_end_time = endtime AND doctor_id = doctorid);
+	ans := (SELECT slot_id FROM doctor_schedule WHERE slot_end_time = endtime AND doctor_id = doctorid);
 	INSERT INTO appointments VALUES (ans, patientid, doctorid);
 	RAISE NOTICE 'Booking success';
 END;
 $$ language plpgsql;
-DROP FUNCTION booking_doctor(patientid int, doctorid int, begintime timestamp, endtime timestamp)
+-- DROP FUNCTION booking_doctor(patientid int, doctorid int, begintime timestamp, endtime timestamp)
 
 -- Function có tác dụng tìm lịch làm việc của bác sĩ với thời gian cho trước --
 
@@ -345,11 +352,42 @@ DECLARE ans INT;
 BEGIN 
 	ans :=
     (SELECT slot_id 
-	FROM doctor_slots
+	FROM doctor_schedule
 	WHERE slot_end_time = endtime AND doctor_id = doctorid);
 	RETURN ans;
 END;
 $$ language plpgsql;
+
+-- DROP FUNCTION find_diseases_by_symptoms(symptom_names TEXT)
+
+-- Find most matched disease with symptoms
+CREATE OR REPLACE FUNCTION find_diseases_by_symptoms(symptom_names TEXT)
+RETURNS TABLE (
+	major_name VARCHAR, 
+    disease_name VARCHAR,
+    symptoms VARCHAR[],
+    num_matched_symptoms BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH symptom_ids AS (
+        SELECT symptom_id 
+        FROM Symptom 
+        WHERE symptom_name = ANY(string_to_array(symptom_names, ','))
+    )
+    SELECT 
+		m.major_name,
+        d.disease_name,
+        array_agg(s.symptom_name),
+        COUNT(s.symptom_id)::BIGINT
+    FROM disease d
+    JOIN Symptom s ON d.disease_id = s.disease_id
+	JOIN major m ON d.major_id = m.major_id
+    WHERE s.symptom_id IN (SELECT symptom_id FROM symptom_ids)
+    GROUP BY d.disease_name, m.major_name
+    ORDER BY COUNT(s.symptom_id) DESC;
+END;
+$$ LANGUAGE plpgsql;
 
 															-- Privilege --
 
@@ -376,9 +414,17 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO doctor;
 												
 						
 																-- Demo --
+-- Show disease and matched symptom
+SELECT m.major_name AS Major, d.disease_name AS Disease, array_agg(ds.symptom_name) AS Symptom 
+FROM Disease d
+JOIN Symptom ds ON d.disease_id = ds.disease_id
+JOIN major m ON m.major_id = d.major_id
+GROUP BY d.disease_name, m.major_name
 
+-- Find most matched disease
+SELECT * FROM find_diseases_by_symptoms('Headache,Fever,Cough');
 
-example demo: patient_id = 15
+-- example demo: patient_id = 15
 
 -- Find appopriate doctor --
 SELECT * FROM find_suitable_doctor_with_major ('Neurology');
