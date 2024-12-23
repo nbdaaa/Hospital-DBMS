@@ -137,8 +137,13 @@ RETURNS trigger
 AS $$
 BEGIN 
 	UPDATE doctor_schedule
-	SET available = 'No' 
+	SET nums_of_patient = OLD.nums_of_patient + 1
 	WHERE slot_id = NEW.slot_id;
+
+	UPDATE doctor_schedule 
+	SET available = 'NO'
+	WHERE slot_id = NEW.slot_id AND nums_of_patients = 5
+	
 	RETURN NEW;
 END 
 $$ language plpgsql; 
@@ -159,6 +164,10 @@ BEGIN
     UPDATE doctor_schedule
 	SET available = 'Yes'
 	WHERE slot_id = OLD.slot_id;
+
+	UPDATE doctor_schedule 
+	SET nums_of_patient  = OLD.nums_of_patient - 1 
+	WHERE slot_id = OLD.slot_id AND OLD.nums_of_patient >= 1 
 	RETURN NEW;
 END;
 $$ language plpgsql;
@@ -360,7 +369,7 @@ $$ language plpgsql;
 
 -- DROP FUNCTION find_diseases_by_symptoms(symptom_names TEXT)
 
--- Find most matched disease with symptoms
+-- Function có tác dụng tìm major và bệnh phù hợp nhất với các symptom mà bệnh nhân đưa ra
 CREATE OR REPLACE FUNCTION find_diseases_by_symptoms(symptom_names TEXT)
 RETURNS TABLE (
 	major_name VARCHAR, 
@@ -391,25 +400,25 @@ $$ LANGUAGE plpgsql;
 
 															-- Privilege --
 
--- --admin--
--- CREATE USER adminstrator WITH PASSWORD 'admin1'
--- GRANT CONNECT ON DATABASE dblabproject TO adminstrator
--- REVOKE CONNECT ON DATABASE dblabproject FROM adminstrator
--- GRANT SELECT ON ALL TABLES IN SCHEMA public TO adminstrator
--- REVOKE SELECT ON ALL TABLES IN SCHEMA public FROM adminstrator
+--admin--
+CREATE USER adminstrator WITH PASSWORD 'admin1'
+GRANT CONNECT ON DATABASE dblabproject TO adminstrator
+REVOKE CONNECT ON DATABASE dblabproject FROM adminstrator
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO adminstrator
+REVOKE SELECT ON ALL TABLES IN SCHEMA public FROM adminstrator
 
--- --idadmin--
--- CREATE USER itadmin SUPERUSER PASSWORD 'itadmin1';
+--idadmin--
+CREATE USER itadmin SUPERUSER PASSWORD 'itadmin1';
 
--- --patient--
--- CREATE USER patient WITH PASSWORD 'patient1';
--- GRANT CONNECT ON DATABASE dblabproject TO patient;
--- GRANT SELECT ON ALL TABLES IN SCHEMA public TO patient;
+--patient--
+CREATE USER patient WITH PASSWORD 'patient1';
+GRANT CONNECT ON DATABASE dblabproject TO patient;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO patient;
 
--- --doctor--
--- CREATE USER doctor WITH PASSWORD 'doctor1';
--- GRANT CONNECT ON DATABASE dblabproject TO doctor;
--- GRANT SELECT ON ALL TABLES IN SCHEMA public TO doctor;
+--doctor--
+CREATE USER doctor WITH PASSWORD 'doctor1';
+GRANT CONNECT ON DATABASE dblabproject TO doctor;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO doctor;
 
 												
 						
