@@ -136,12 +136,12 @@ RETURNS trigger
 AS $$
 BEGIN 
 	UPDATE doctor_schedule
-	SET nums_of_patient = OLD.nums_of_patient + 1
+	SET nums_of_patient = nums_of_patient + 1
 	WHERE slot_id = NEW.slot_id;
 
 	UPDATE doctor_schedule 
 	SET available = 'NO'
-	WHERE slot_id = NEW.slot_id AND nums_of_patients = 5
+	WHERE slot_id = NEW.slot_id AND nums_of_patient = 5;
 	
 	RETURN NEW;
 END 
@@ -151,7 +151,6 @@ CREATE OR REPLACE TRIGGER available_slots
 AFTER INSERT ON appointments
 FOR EACH ROW
 EXECUTE PROCEDURE public.update_available_slots()
-
 
 --------------------------------------------------------------
 
@@ -165,8 +164,8 @@ BEGIN
 	WHERE slot_id = OLD.slot_id;
 
 	UPDATE doctor_schedule 
-	SET nums_of_patient  = OLD.nums_of_patient - 1 
-	WHERE slot_id = OLD.slot_id AND OLD.nums_of_patient >= 1 
+	SET nums_of_patient  = nums_of_patient - 1 
+	WHERE slot_id = OLD.slot_id AND nums_of_patient >= 1;
 	RETURN NEW;
 END;
 $$ language plpgsql;
@@ -227,7 +226,7 @@ BEGIN
 	-- Case: New disease
 	ELSE
 		INSERT INTO medical_history(patient_id, disease, prescription, diagnosis_date, number_of_app)
-		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time));		
+		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time), 1);		
 
 		UPDATE medical_history 
 		SET cured_date = DATE(NEW.end_time)
@@ -236,53 +235,6 @@ BEGIN
 	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION public.update_medical_history_function ()
-RETURNS trigger
-AS $$
-BEGIN 
-	IF EXISTS (
-        SELECT 1
-        FROM medical_history
-        WHERE disease = NEW.disease AND NEW.patient_id = patient_id
-    ) THEN
-	IF EXISTS (
-        SELECT 1
-        FROM medical_history
-        WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id
-    ) THEN
-		UPDATE medical_history
-		SET prescription = CONCAT(NEW.prescription, ', ', prescription)
-		WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-		UPDATE medical_history
-		SET number_of_app = number_of_app + 1
-		WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-		UPDATE medical_history
-		SET cured_date = DATE(NEW.begin_time)
-		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-	ELSE 
-		INSERT INTO medical_history(patient_id, disease, prescription, diagnosis_date)
-		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time));
-		UPDATE medical_history
-		SET cured_date = DATE(NEW.begin_time)
-		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-		UPDATE medical_history
-		SET number_of_app = (SELECT DISTINCT number_of_app FROM medical_history WHERE disease = NEW.disease AND cured_date IS NOT NULL AND NEW.patient_id = patient_id) + 1
-		WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
-	END IF;
-	
-	ELSE 
-		INSERT INTO medical_history(patient_id, disease, prescription, diagnosis_date, number_of_app)
-		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time), 1);
-		UPDATE medical_history
-		SET cured_date = DATE(NEW.begin_time)
-		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease AND NEW.patient_id = patient_id;
-	END IF;
-	RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-
 
 CREATE OR REPLACE TRIGGER update_medical_history 
 AFTER UPDATE OF begin_time,end_time ON record
@@ -372,7 +324,7 @@ RETURNS TABLE (
 AS $$ 
 BEGIN
 	RETURN QUERY
-	SELECT d.doctor_id, d.doctor_first_name, d.doctor_last_name,d.doctor_email,
+	SELECT d.doctor_id, d.doctor_	first_name, d.doctor_last_name,d.doctor_email,
 		   d.gender, d.doctor_dob, d.years_of_exp, d.roles, m.major_name, d.workplace,
 		   ds.slot_begin_time, ds.slot_end_time, ds.available
 	FROM doctors d
@@ -385,16 +337,39 @@ $$ LANGUAGE plpgsql;
 
 -- Function có tác dụng đặt lịch khám cho bệnh nhân có patient_id bác sĩ và thời gian khám --
 
-CREATE OR REPLACE FUNCTION booking_doctor (patientid int, doctorid int, begintime timestamp, endtime timestamp) 
-RETURNS VOID
+CREATE OR REPLACE FUNCTION booking_doctor (patientid INT, doctorid INT, begintime TIMESTAMP, endtime TIMESTAMP)
+RETURNS TABLE(
+    doctor_id INT,
+    slot_id INT,
+    slot_begin_time TIMESTAMP,
+    slot_end_time TIMESTAMP,
+    nums_of_patient INT,
+    available VARCHAR
+)
 AS $$
-DECLARE ans INT;
-BEGIN 
-	ans := (SELECT slot_id FROM doctor_schedule WHERE slot_end_time = endtime AND doctor_id = doctorid);
-	INSERT INTO appointments VALUES (ans, patientid, doctorid);
-	RAISE NOTICE 'Booking success';
+DECLARE
+    v_slot_id INT;
+BEGIN
+    -- Check if the slot exists and is available.
+    SELECT d.slot_id
+    INTO v_slot_id
+    FROM doctor_schedule d
+    WHERE d.slot_end_time = endtime AND d.doctor_id = doctorid AND d.available = 'Yes'; -- Add availability check
+
+	IF NOT FOUND THEN
+        RAISE EXCEPTION 'Slot not found or not available'; -- Use exceptions for errors
+    END IF;
+	
+    INSERT INTO appointments (slot_id, patient_id, doctor_id) VALUES (v_slot_id, patientid, doctorid); -- Explicit column names are better
+    RAISE NOTICE 'Booking success';
+
+    RETURN QUERY
+    SELECT d.doctor_id, d.slot_id, d.slot_begin_time, d.slot_end_time, d.nums_of_patient, d.available
+    FROM doctor_schedule d
+    WHERE d.slot_id = v_slot_id; 
 END;
-$$ language plpgsql;
+$$ LANGUAGE plpgsql;
+
 -- DROP FUNCTION booking_doctor(patientid int, doctorid int, begintime timestamp, endtime timestamp)
 
 -- Function có tác dụng tìm lịch làm việc của bác sĩ với thời gian cho trước --
@@ -476,15 +451,14 @@ JOIN major m ON m.major_id = d.major_id
 GROUP BY d.disease_name, m.major_name
 ORDER BY m.major_name
 
--- Find most matched disease
-SELECT * FROM find_diseases_by_symptoms('Headache,Fever,Cough');
-
 -- example demo: patient_id = 15
 SELECT * FROM patients 
 WHERE patient_id = 15
 
+-- Find most matched disease
+SELECT * FROM find_diseases_by_symptoms('Dizziness,Headache,Cough,Blurred vision');
 -- Find appopriate doctor --
-SELECT * FROM find_suitable_doctor_with_major ('Gynecology');
+SELECT * FROM find_suitable_doctor_with_major ('Pediatrics');
 
 -- Booking doctor --
 SELECT public.booking_doctor(15, 125, '2023-02-12 11:00:00', '2023-02-12 12:00:00')
@@ -505,14 +479,18 @@ SELECT public.booking_doctor(15, 78, '2023-03-09 15:00:00', '2023-03-09 16:00:00
 
 insert into record (slot_id, doctor_id, patient_id, bill, patient_review, symptoms, disease, treatment, type_of_operation, prescription, doctor_note, medical_condition_over_5) 
 values (find_slots('2023-02-16 11:00:00', 36), 36, 15, 664, 3, 'Headaches', 'Pneumonia', 'Pills', 'Hysterectomy', 'Pills', 'Patient is recovering well.', 1);
+
 insert into record (slot_id, doctor_id, patient_id, bill, patient_review, symptoms, disease, treatment, type_of_operation, prescription, doctor_note, medical_condition_over_5) 
 values (find_slots('2023-02-25 13:00:00', 11), 11, 15, 640, 5, 'Headaches', 'Pneumonia', 'Pain medications', 'Hysterectomy', 'Pantoprazole', 'Patient is recovering well.', 2);
+
 insert into record (slot_id, doctor_id, patient_id, bill, patient_review, symptoms, disease, treatment, type_of_operation, prescription, doctor_note, medical_condition_over_5) 
 values (find_slots('2023-02-25 16:00:00', 52), 52, 15, 40, 1, 'Headaches', 'Pneumonia', 'Drink water', 'Hysterectomy', 'Pills', 'Patient is recovering well.', 3);
+
 insert into record (slot_id, doctor_id, patient_id, bill, patient_review, symptoms, disease, treatment, type_of_operation, prescription, doctor_note, medical_condition_over_5) 
 values (find_slots('2023-03-09 16:00:00', 78), 78, 15, 100, 2, 'Headaches', 'Pneumonia', 'Pills', 'Hysterectomy', 'Drink water', 'Patient is recovering well.', 5);
 
 -- Finally, the medical_history after several times having appointments --
 SELECT * FROM find_patient_health_record('Benoite', 'Dunsmore', '1983-11-09');
 
-select * from doctors;
+delete from appointments where patient_id = 15 and doctor_id != 137
+select * from appointments where patient_id = 15
