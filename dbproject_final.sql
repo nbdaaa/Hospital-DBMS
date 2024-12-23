@@ -25,14 +25,13 @@ CREATE TABLE doctors(
 
 -- DROP TABLE disease
 CREATE TABLE Disease (
-    disease_id SERIAL PRIMARY KEY,
+    disease_id INT PRIMARY KEY,
     major_id INT NOT NULL,
     disease_name VARCHAR NOT NULL,
     CONSTRAINT disease_major_fkey FOREIGN KEY (major_id) REFERENCES major(major_id) ON DELETE CASCADE
 );
 
-
--- DROP TABLE disease_symptoms
+-- DROP TABLE Symptom
 CREATE TABLE Symptom (
     symptom_id INT,
     symptom_name VARCHAR(100) NOT NULL,
@@ -42,7 +41,7 @@ CREATE TABLE Symptom (
 );
 
 
---DROP TABLE doctor_schedule
+-- DROP TABLE doctor_schedule
 CREATE TABLE doctor_schedule (
 	slot_id INT, 
 	slot_begin_time TIMESTAMP NOT NULL,
@@ -70,7 +69,7 @@ CREATE TABLE patients(
 );
 
 --SELECT * FROM doctor_slots
---DROP TABLE appointments
+-- DROP TABLE appointments
 CREATE TABLE appointments(
 	slot_id INT,
 	patient_id INT,
@@ -80,7 +79,7 @@ CREATE TABLE appointments(
 	CONSTRAINT appointment_patient_fkey FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE
 );
 
---DROP TABLE record
+-- DROP TABLE record
 CREATE TABLE record (
 	slot_id INT,
 	doctor_id INT,
@@ -237,6 +236,52 @@ BEGIN
 	RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.update_medical_history_function ()
+RETURNS trigger
+AS $$
+BEGIN 
+	IF EXISTS (
+        SELECT 1
+        FROM medical_history
+        WHERE disease = NEW.disease AND NEW.patient_id = patient_id
+    ) THEN
+	IF EXISTS (
+        SELECT 1
+        FROM medical_history
+        WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id
+    ) THEN
+		UPDATE medical_history
+		SET prescription = CONCAT(NEW.prescription, ', ', prescription)
+		WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
+		UPDATE medical_history
+		SET number_of_app = number_of_app + 1
+		WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
+		UPDATE medical_history
+		SET cured_date = DATE(NEW.begin_time)
+		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
+	ELSE 
+		INSERT INTO medical_history(patient_id, disease, prescription, diagnosis_date)
+		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time));
+		UPDATE medical_history
+		SET cured_date = DATE(NEW.begin_time)
+		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
+		UPDATE medical_history
+		SET number_of_app = (SELECT DISTINCT number_of_app FROM medical_history WHERE disease = NEW.disease AND cured_date IS NOT NULL AND NEW.patient_id = patient_id) + 1
+		WHERE disease = NEW.disease AND cured_date IS NULL AND NEW.patient_id = patient_id;
+	END IF;
+	
+	ELSE 
+		INSERT INTO medical_history(patient_id, disease, prescription, diagnosis_date, number_of_app)
+		VALUES (NEW.patient_id, NEW.disease, NEW.prescription, DATE(NEW.begin_time), 1);
+		UPDATE medical_history
+		SET cured_date = DATE(NEW.begin_time)
+		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease AND NEW.patient_id = patient_id;
+	END IF;
+	RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 
 
 CREATE OR REPLACE TRIGGER update_medical_history 
@@ -429,14 +474,17 @@ FROM Disease d
 JOIN Symptom ds ON d.disease_id = ds.disease_id
 JOIN major m ON m.major_id = d.major_id
 GROUP BY d.disease_name, m.major_name
+ORDER BY m.major_name
 
 -- Find most matched disease
 SELECT * FROM find_diseases_by_symptoms('Headache,Fever,Cough');
 
 -- example demo: patient_id = 15
+SELECT * FROM patients 
+WHERE patient_id = 15
 
 -- Find appopriate doctor --
-SELECT * FROM find_suitable_doctor_with_major ('Neurology');
+SELECT * FROM find_suitable_doctor_with_major ('Gynecology');
 
 -- Booking doctor --
 SELECT public.booking_doctor(15, 125, '2023-02-12 11:00:00', '2023-02-12 12:00:00')
@@ -447,6 +495,7 @@ values (find_slots('2023-02-12 12:00:00', 125), 125, 15, 6640, 4, 'Headaches', '
 
 -- Check the medical_history --
 SELECT * FROM find_patient_health_record('Benoite', 'Dunsmore', '1983-11-09') 
+
 
 -- If incase the patient are cured but he relapses(tái phát), the medical_history will be updated for each relapse --
 SELECT public.booking_doctor(15, 36, '2023-02-16 10:00:00', '2023-02-16 11:00:00');
@@ -465,3 +514,5 @@ values (find_slots('2023-03-09 16:00:00', 78), 78, 15, 100, 2, 'Headaches', 'Pne
 
 -- Finally, the medical_history after several times having appointments --
 SELECT * FROM find_patient_health_record('Benoite', 'Dunsmore', '1983-11-09');
+
+select * from doctors;

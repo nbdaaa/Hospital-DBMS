@@ -1,4 +1,4 @@
-DELETE FROM major
+DELETE FROM Disease
 insert into major (major_id, major_name) values (1, 'Cardiology');
 insert into major (major_id, major_name) values (2, 'Neurology');
 insert into major (major_id, major_name) values (3, 'Dermatology');

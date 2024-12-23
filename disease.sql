@@ -1,69 +1,71 @@
--- Cardiology (major_id = 1)
-insert into Disease (major_id, disease_name) values (1, 'Coronary Artery Disease');
-insert into Disease (major_id, disease_name) values (1, 'Heart Failure');
-insert into Disease (major_id, disease_name) values (1, 'Arrhythmia');
-insert into Disease (major_id, disease_name) values (1, 'Valvular Heart Disease');
-insert into Disease (major_id, disease_name) values (1, 'Hypertension');
+INSERT INTO Disease (disease_id, major_id, disease_name) 
+VALUES 
+-- Cardiology
+(1, 1, 'Coronary Artery Disease'),
+(2, 1, 'Heart Failure'),
+(3, 1, 'Arrhythmia'),
+(4, 1, 'Valvular Heart Disease'),
+(5, 1, 'Hypertension'),
 
--- Neurology (major_id = 2)
-insert into Disease (major_id, disease_name) values (2, 'Stroke');
-insert into Disease (major_id, disease_name) values (2, 'Epilepsy');
-insert into Disease (major_id, disease_name) values (2, 'Multiple Sclerosis');
-insert into Disease (major_id, disease_name) values (2, 'Parkinson''s Disease');
-insert into Disease (major_id, disease_name) values (2, 'Alzheimer''s Disease');
+-- Neurology  
+(6, 2, 'Stroke'),
+(7, 2, 'Epilepsy'),
+(8, 2, 'Multiple Sclerosis'),
+(9, 2, 'Parkinson''s Disease'),
+(10, 2, 'Alzheimer''s Disease'),
 
--- Dermatology (major_id = 3)
-insert into Disease (major_id, disease_name) values (3, 'Eczema');
-insert into Disease (major_id, disease_name) values (3, 'Psoriasis');
-insert into Disease (major_id, disease_name) values (3, 'Acne');
-insert into Disease (major_id, disease_name) values (3, 'Skin Cancer');
-insert into Disease (major_id, disease_name) values (3, 'Rosacea');
+-- Dermatology
+(11, 3, 'Eczema'),
+(12, 3, 'Psoriasis'),
+(13, 3, 'Acne'),
+(14, 3, 'Skin Cancer'),
+(15, 3, 'Rosacea'),
 
--- Pediatrics (major_id = 4)
-insert into Disease (major_id, disease_name) values (4, 'Asthma');
-insert into Disease (major_id, disease_name) values (4, 'Otitis Media');
-insert into Disease (major_id, disease_name) values (4, 'Bronchiolitis');
-insert into Disease (major_id, disease_name) values (4, 'Gastroenteritis');
-insert into Disease (major_id, disease_name) values (4, 'Common Cold');
+-- Pediatrics
+(16, 4, 'Asthma'),
+(17, 4, 'Otitis Media'),
+(18, 4, 'Bronchiolitis'),
+(19, 4, 'Gastroenteritis'),
+(20, 4, 'Common Cold'),
 
--- Oncology (major_id = 5)
-insert into Disease (major_id, disease_name) values (5, 'Lung Cancer');
-insert into Disease (major_id, disease_name) values (5, 'Breast Cancer');
-insert into Disease (major_id, disease_name) values (5, 'Colorectal Cancer');
-insert into Disease (major_id, disease_name) values (5, 'Prostate Cancer');
-insert into Disease (major_id, disease_name) values (5, 'Leukemia');
+-- Oncology
+(21, 5, 'Lung Cancer'),
+(22, 5, 'Breast Cancer'),
+(23, 5, 'Colorectal Cancer'),
+(24, 5, 'Prostate Cancer'),
+(25, 5, 'Leukemia'),
 
--- Gynecology (major_id = 6)
-insert into Disease (major_id, disease_name) values (6, 'Endometriosis');
-insert into Disease (major_id, disease_name) values (6, 'Polycystic Ovary Syndrome (PCOS)');
-insert into Disease (major_id, disease_name) values (6, 'Uterine Fibroids');
-insert into Disease (major_id, disease_name) values (6, 'Pelvic Inflammatory Disease (PID)');
-insert into Disease (major_id, disease_name) values (6, 'Ovarian Cysts');
+-- Gynecology
+(26, 6, 'Endometriosis'),
+(27, 6, 'Polycystic Ovary Syndrome (PCOS)'),
+(28, 6, 'Uterine Fibroids'),
+(29, 6, 'Pelvic Inflammatory Disease (PID)'),
+(30, 6, 'Ovarian Cysts'),
 
--- Orthopedics (major_id = 7)
-insert into Disease (major_id, disease_name) values (7, 'Osteoarthritis');
-insert into Disease (major_id, disease_name) values (7, 'Rheumatoid Arthritis');
-insert into Disease (major_id, disease_name) values (7, 'Osteoporosis');
-insert into Disease (major_id, disease_name) values (7, 'Carpal Tunnel Syndrome');
-insert into Disease (major_id, disease_name) values (7, 'Tendonitis');
+-- Orthopedics
+(31, 7, 'Osteoarthritis'),
+(32, 7, 'Rheumatoid Arthritis'),
+(33, 7, 'Osteoporosis'),
+(34, 7, 'Carpal Tunnel Syndrome'),
+(35, 7, 'Tendonitis'),
 
--- Urology (major_id = 8)
-insert into Disease (major_id, disease_name) values (8, 'Urinary Tract Infection (UTI)');
-insert into Disease (major_id, disease_name) values (8, 'Kidney Stones');
-insert into Disease (major_id, disease_name) values (8, 'Benign Prostatic Hyperplasia (BPH)');
-insert into Disease (major_id, disease_name) values (8, 'Incontinence');
-insert into Disease (major_id, disease_name) values (8, 'Erectile Dysfunction');
+-- Urology
+(36, 8, 'Urinary Tract Infection (UTI)'),
+(37, 8, 'Kidney Stones'),
+(38, 8, 'Benign Prostatic Hyperplasia (BPH)'),
+(39, 8, 'Incontinence'),
+(40, 8, 'Erectile Dysfunction'),
 
--- Psychiatry (major_id = 9)
-insert into Disease (major_id, disease_name) values (9, 'Depression');
-insert into Disease (major_id, disease_name) values (9, 'Anxiety Disorders');
-insert into Disease (major_id, disease_name) values (9, 'Bipolar Disorder');
-insert into Disease (major_id, disease_name) values (9, 'Schizophrenia');
-insert into Disease (major_id, disease_name) values (9, 'Post-Traumatic Stress Disorder (PTSD)');
+-- Psychiatry
+(41, 9, 'Depression'),
+(42, 9, 'Anxiety Disorders'),
+(43, 9, 'Bipolar Disorder'),
+(44, 9, 'Schizophrenia'),
+(45, 9, 'Post-Traumatic Stress Disorder (PTSD)'),
 
--- Endocrinology (major_id = 10)
-insert into Disease (major_id, disease_name) values (10, 'Diabetes Mellitus');
-insert into Disease (major_id, disease_name) values (10, 'Hypothyroidism');
-insert into Disease (major_id, disease_name) values (10, 'Hyperthyroidism');
-insert into Disease (major_id, disease_name) values (10, 'Cushing''s Syndrome');
-insert into Disease (major_id, disease_name) values (10, 'Addison''s Disease');
+-- Endocrinology
+(46, 10, 'Diabetes Mellitus'),
+(47, 10, 'Hypothyroidism'),
+(48, 10, 'Hyperthyroidism'),
+(49, 10, 'Cushing''s Syndrome'),
+(50, 10, 'Addison''s Disease');
