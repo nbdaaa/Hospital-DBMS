@@ -201,7 +201,7 @@ BEGIN
 		UPDATE medical_history 
  		SET prescription = CONCAT(NEW.prescription, ', ', prescription),
 			number_of_app = number_of_app + 1
-		WHERE disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
+		WHERE disease = NEW.disease  AND cured_date IS NULL AND patient_id = NEW.patient_id; 
 		-- update cured date
 		UPDATE medical_history 
 		SET cured_date = DATE(NEW.end_time)
@@ -217,7 +217,7 @@ BEGIN
 			FROM medical_history 
 			WHERE disease = NEW.disease AND cured_date IS NOT NULL AND patient_id = NEW.patient_id
 		) + 1
-		WHERE disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
+		WHERE disease = NEW.disease  AND cured_date IS NULL AND patient_id = NEW.patient_id; 
 		-- update cured date if medical_condition_over_5 = 5 (doctor's evaluation)
 		UPDATE medical_history 
 		SET cured_date = DATE(NEW.end_time)
