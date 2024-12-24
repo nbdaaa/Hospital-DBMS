@@ -205,7 +205,7 @@ BEGIN
 		-- update cured date
 		UPDATE medical_history 
 		SET cured_date = DATE(NEW.end_time)
-		WHERE medical_condition_over_5 = 5 AND disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
+		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease  AND cured_date IS NULL AND patient_id = NEW.patient_id; 
 	--- If the disease had been cured in the past, then create a new record (chua thong tin tai phat cua benh)
 	ELSE
 		INSERT INTO medical_history(patient_id, disease, prescription, diagnosis_date)
@@ -221,7 +221,7 @@ BEGIN
 		-- update cured date if medical_condition_over_5 = 5 (doctor's evaluation)
 		UPDATE medical_history 
 		SET cured_date = DATE(NEW.end_time)
-		WHERE medical_condition_over_5 = 5 AND disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
+		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease  AND cured_date IS NULL AND patient_id = NEW.patient_id; 
 	END IF; 
 	-- Case: New disease
 	ELSE
@@ -230,7 +230,7 @@ BEGIN
 
 		UPDATE medical_history 
 		SET cured_date = DATE(NEW.end_time)
-		WHERE medical_condition_over_5 = 5 AND disease = NEW.disease  AND cured_data IS NULL AND patient_id = NEW.patient_id; 
+		WHERE NEW.medical_condition_over_5 = 5 AND disease = NEW.disease  AND cured_date IS NULL AND patient_id = NEW.patient_id; 
 	END IF;
 	RETURN NEW;
 END;
@@ -493,4 +493,4 @@ values (find_slots('2023-03-09 16:00:00', 78), 78, 15, 100, 2, 'Headaches', 'Pne
 SELECT * FROM find_patient_health_record('Benoite', 'Dunsmore', '1983-11-09');
 
 delete from appointments where patient_id = 15 and doctor_id != 137
-select * from appointments where patient_id = 15
+delete from medical_history where patient_id = 15
